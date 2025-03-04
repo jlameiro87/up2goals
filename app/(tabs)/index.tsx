@@ -1,74 +1,163 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
+import { StyleSheet, TextInput, ScrollView, AppState, AppStateStatus } from 'react-native';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
-export default function HomeScreen() {
+import GoalInput from '@/components/GoalInput';
+import ShiftsInput from '@/components/ShiftsInput';
+
+type GoalType = {
+  target: number;
+  current: number;
+};
+
+const STORAGE_KEY = 'verizon_sales_goals';
+
+export default function GoalsScreen() {
+  const colorScheme = useColorScheme() ?? 'light';
+  const [shifts, setShifts] = useState(20);
+  const [moneyGoal, setMoneyGoal] = useState<GoalType>({ target: 3500, current: 600 });
+  const [phoneGoal, setPhoneGoal] = useState<GoalType>({ target: 15, current: 2 });
+  const [internetGoal, setInternetGoal] = useState<GoalType>({ target: 3, current: 0 });
+
+  useEffect(() => {
+    loadGoals();
+  }, []);
+
+  useEffect(() => {
+    saveGoals();
+  }, [shifts, moneyGoal, phoneGoal, internetGoal]);
+
+  const loadGoals = async () => {
+    try {
+      const savedGoals = await AsyncStorage.getItem(STORAGE_KEY);
+      if (savedGoals) {
+        const { shifts: savedShifts, money, phone, internet } = JSON.parse(savedGoals);
+        setShifts(savedShifts);
+        setMoneyGoal(money);
+        setPhoneGoal(phone);
+        setInternetGoal(internet);
+      } else {
+        console.log('No saved goals found.');
+      }
+    } catch (error) {
+      console.error('Error loading goals:', error);
+    }
+  };
+
+  const saveGoals = async () => {
+    try {
+      const goalsData = {
+        shifts,
+        money: moneyGoal,
+        phone: phoneGoal,
+        internet: internetGoal,
+      };
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(goalsData));
+    } catch (error) {
+      console.error('Error saving goals:', error);
+    }
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+    <KeyboardAwareScrollView
+      style={styles.container}
+      enableOnAndroid={true}
+      enableAutomaticScroll={true}
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={styles.content}
+    >
+      <ThemedView style={styles.content}>
+        <ThemedText type="title">Monthly Goals</ThemedText>
+
+        <ShiftsInput
+          shifts={shifts}
+          setShifts={setShifts}
+          moneyGoal={moneyGoal}
+          phoneGoal={phoneGoal}
+          internetGoal={internetGoal}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
+
+        <GoalInput
+          label="Sales Goal"
+          goal={moneyGoal}
+          setGoal={setMoneyGoal}
+          prefix="$"
+          keyboardType="decimal-pad"
+        />
+
+        <GoalInput
+          label="Phone Sales"
+          goal={phoneGoal}
+          setGoal={setPhoneGoal}
+        />
+
+        <GoalInput
+          label="Internet Sales"
+          goal={internetGoal}
+          setGoal={setInternetGoal}
+        />
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+  },
+  content: {
+    padding: 20,
+    gap: 20,
+  },
+  goalContainer: {
+    gap: 10,
+    padding: 15,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  input: {
+    flex: 1,
+    height: 40,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    marginLeft: 10,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  progressContainer: {
+    height: 10,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 5,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+  },
+  progressInfo: {
+    gap: 6,
+    marginTop: 10,
+  },
+  remainingText: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic'
+  },
+  shiftsBreakdown: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#ccc',
+    gap: 4,
   },
 });

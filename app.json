@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "my-expo-app",
-    "slug": "my-expo-app",
+    "name": "Up2Goals",
+    "slug": "up-2-goals",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -9,13 +9,15 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.myexpoapp"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.anonymous.myexpoapp"
     },
     "web": {
       "bundler": "metro",
