@@ -1,22 +1,25 @@
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
-import { StyleSheet, TextInput, ScrollView, AppState, AppStateStatus } from 'react-native';
+import { StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 import GoalInput from '@/components/GoalInput';
 import ShiftsInput from '@/components/ShiftsInput';
+import { GoalHistory } from "@/app/(tabs)/history";
+import { Colors } from "@/constants/Colors";
+import ParallaxScrollView from "@/components/ParallaxScrollView";
 
-type GoalType = {
+export type GoalType = {
   target: number;
   current: number;
 };
 
 const STORAGE_KEY = 'verizon_sales_goals';
+const HISTORY_KEY = 'verizon_sales_history';
 
 export default function GoalsScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -64,46 +67,106 @@ export default function GoalsScreen() {
     }
   };
 
+  const showSaveAlert = () => {
+    Alert.alert(
+      'Save Goals',
+      'Are you sure you want to save current goals? This will reset your current progress.',
+      [
+        {
+          text: 'No',
+          style: 'cancel',
+        },
+        {
+          text: 'Yes',
+          onPress: saveToHistory,
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const saveToHistory = async () => {
+    try {
+      const date = new Date();
+      const historyItem: GoalHistory = {
+        id: Date.now().toString(),
+        date: date.toISOString(),
+        month: date.toLocaleString('default', { month: 'long' }),
+        year: date.getFullYear(),
+        shifts,
+        money: moneyGoal,
+        phone: phoneGoal,
+        internet: internetGoal,
+      };
+
+      const savedHistory = await AsyncStorage.getItem(HISTORY_KEY);
+      const history = savedHistory ? JSON.parse(savedHistory) : [];
+      history.unshift(historyItem);
+      await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+
+      // Reset current values but keep targets
+      setMoneyGoal({ ...moneyGoal, current: 0 });
+      setPhoneGoal({ ...phoneGoal, current: 0 });
+      setInternetGoal({ ...internetGoal, current: 0 });
+    } catch (error) {
+      console.error('Error saving to history:', error);
+    }
+  };
+
   return (
-    <KeyboardAwareScrollView
-      style={styles.container}
-      enableOnAndroid={true}
-      enableAutomaticScroll={true}
-      keyboardShouldPersistTaps="handled"
-      contentContainerStyle={styles.content}
+    <ParallaxScrollView
+      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
+      headerImage={
+        <Image
+          source={require('@/assets/images/partial-react-logo.png')}
+          style={styles.reactLogo}
+        />
+      }
     >
-      <ThemedView style={styles.content}>
-        <ThemedText type="title">Monthly Goals</ThemedText>
+      <KeyboardAwareScrollView
+        style={styles.container}
+        enableOnAndroid={true}
+        enableAutomaticScroll={true}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.content}
+      >
+        <ThemedView style={styles.content}>
+          <ThemedText type="title">Monthly Goals</ThemedText>
 
-        <ShiftsInput
-          shifts={shifts}
-          setShifts={setShifts}
-          moneyGoal={moneyGoal}
-          phoneGoal={phoneGoal}
-          internetGoal={internetGoal}
-        />
+          <TouchableOpacity onPress={showSaveAlert} style={styles.saveButton}>
+            <ThemedText style={styles.saveButtonText}>Save & Reset</ThemedText>
+          </TouchableOpacity>
 
-        <GoalInput
-          label="Sales Goal"
-          goal={moneyGoal}
-          setGoal={setMoneyGoal}
-          prefix="$"
-          keyboardType="decimal-pad"
-        />
+          <ShiftsInput
+            shifts={shifts}
+            setShifts={setShifts}
+            moneyGoal={moneyGoal}
+            phoneGoal={phoneGoal}
+            internetGoal={internetGoal}
+          />
 
-        <GoalInput
-          label="Phone Sales"
-          goal={phoneGoal}
-          setGoal={setPhoneGoal}
-        />
+          <GoalInput
+            label="Sales Goal"
+            goal={moneyGoal}
+            setGoal={setMoneyGoal}
+            prefix="$"
+            keyboardType="decimal-pad"
+          />
 
-        <GoalInput
-          label="Internet Sales"
-          goal={internetGoal}
-          setGoal={setInternetGoal}
-        />
-      </ThemedView>
-    </KeyboardAwareScrollView>
+          <GoalInput
+            label="Phone Sales"
+            goal={phoneGoal}
+            setGoal={setPhoneGoal}
+          />
+
+          <GoalInput
+            label="Internet Sales"
+            goal={internetGoal}
+            setGoal={setInternetGoal}
+          />
+        </ThemedView>
+      </KeyboardAwareScrollView>
+    </ParallaxScrollView>
   );
 }
 
@@ -112,8 +175,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 20,
+    paddingHorizontal: 0,
+    paddingVertical: 20,
     gap: 20,
+  },
+  parallaxContent: {
+    paddingHorizontal: 0,
   },
   goalContainer: {
     gap: 10,
@@ -159,5 +226,21 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#ccc',
     gap: 4,
+  },
+  saveButton: {
+    backgroundColor: Colors.light.tint,
+    padding: 10,
+    borderRadius: 5,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  reactLogo: {
+    height: 178,
+    width: 290,
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
   },
 });
